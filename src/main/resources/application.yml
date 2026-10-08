@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: pede-ai
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pedeai}
+    username: ${DB_USERNAME:pedeai}
+    password: ${DB_PASSWORD:pedeai}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
