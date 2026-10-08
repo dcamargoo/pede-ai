@@ -3,7 +3,7 @@ spring:
     name: pede-ai
 
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/pedeai_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/pedeai}
     username: ${DB_USERNAME:pedeai}
     password: ${DB_PASSWORD:pedeai}
 
