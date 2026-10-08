@@ -8,6 +8,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tb_pedido")
@@ -35,9 +37,12 @@ public class Pedido {
 
     private LocalDateTime atualizadoEm;
 
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ItemPedido> itens = new ArrayList<>();
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
-    private Usuario clienteId;
+    private Usuario cliente;
 
     @PrePersist
     void prePersist(){
@@ -50,4 +55,10 @@ public class Pedido {
     void preUpdate() {
         this.atualizadoEm = LocalDateTime.now();
     }
+
+    public void adicionarItem(ItemPedido item) {
+        item.setPedido(this);
+        this.itens.add(item);
+    }
+
 }
