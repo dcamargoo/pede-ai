@@ -20,7 +20,7 @@ public class UsuarioService {
     }
 
     @Transactional
-    public UsuarioResponseDTO cadastrar(UsuarioRequestDTO request) {
+    public UsuarioResponseDTO cadastrarUsuario(UsuarioRequestDTO request) {
         boolean existe = usuarioRepository.existsByEmail(request.email());
         if (existe) {
             throw new ConflitoException("Email já cadastrado");
@@ -31,16 +31,16 @@ public class UsuarioService {
         usuarioNovo.setSenha(request.senha());
         usuarioNovo.setPerfil(Perfil.CLIENTE);
         Usuario usuarioSalvo = usuarioRepository.save(usuarioNovo);
-        return toResponse(usuarioSalvo);
+        return toResponseUsuario(usuarioSalvo);
     }
 
     @Transactional(readOnly = true)
-    public UsuarioResponseDTO buscarPorId(Long id) {
+    public UsuarioResponseDTO buscarUsuarioPorId(Long id) {
         Usuario usuario = usuarioRepository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Usuário não encontrado"));
-        return toResponse(usuario);
+        return toResponseUsuario(usuario);
     }
 
-    private UsuarioResponseDTO toResponse(Usuario usuario) {
+    private UsuarioResponseDTO toResponseUsuario(Usuario usuario) {
         return new UsuarioResponseDTO(
                 usuario.getId(),
                 usuario.getNome(),

@@ -20,13 +20,13 @@ public class UsuarioController {
 
     @PostMapping
     public ResponseEntity<UsuarioResponseDTO> cadastrar(@Valid @RequestBody UsuarioRequestDTO usuarioRequestDTO){
-        UsuarioResponseDTO response = usuarioService.cadastrar(usuarioRequestDTO);
+        UsuarioResponseDTO response = usuarioService.cadastrarUsuario(usuarioRequestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<UsuarioResponseDTO> buscarPorId(@PathVariable Long id){
-        UsuarioResponseDTO response = usuarioService.buscarPorId(id);
+        UsuarioResponseDTO response = usuarioService.buscarUsuarioPorId(id);
         return ResponseEntity.ok(response);
     }
 }
