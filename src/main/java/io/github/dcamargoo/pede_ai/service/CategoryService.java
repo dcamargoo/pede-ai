@@ -27,7 +27,7 @@ public class CategoryService {
     public List<CategoryResponseDTO> listCategories(){
         return categoryRepository.findAll()
                 .stream()
-                .map(this::toCategoryResponse)
+                .map(this::toResponse)
                 .toList();
     }
 
@@ -37,10 +37,12 @@ public class CategoryService {
         if (exists){
             throw new ConflictException("Essa categoria já existe");
         }
+
         Category newCategory = new Category();
         newCategory.setName(request.name());
+
         Category savedCategory = categoryRepository.save(newCategory);
-        return toCategoryResponse(savedCategory);
+        return toResponse(savedCategory);
     }
 
     @Transactional
@@ -60,7 +62,7 @@ public class CategoryService {
         category.setName(request.name());
 
         Category savedCategory = categoryRepository.save(category);
-        return toCategoryResponse(savedCategory);
+        return toResponse(savedCategory);
     }
 
     @Transactional
@@ -79,7 +81,7 @@ public class CategoryService {
         categoryRepository.deleteById(id);
     }
 
-    private CategoryResponseDTO toCategoryResponse(Category category){
+    private CategoryResponseDTO toResponse(Category category){
         return new CategoryResponseDTO(
                 category.getId(),
                 category.getName());

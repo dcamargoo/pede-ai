@@ -25,22 +25,24 @@ public class UserService {
         if (exists) {
             throw new ConflictException("Email já cadastrado");
         }
+
         User newUser = new User();
         newUser.setName(request.name());
         newUser.setEmail(request.email());
         newUser.setPassword(request.password());
         newUser.setRole(Role.CUSTOMER);
+
         User savedUser = userRepository.save(newUser);
-        return toUserResponse(savedUser);
+        return toResponse(savedUser);
     }
 
     @Transactional(readOnly = true)
     public UserResponseDTO findUserById(Long id) {
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
-        return toUserResponse(user);
+        return toResponse(user);
     }
 
-    private UserResponseDTO toUserResponse(User user) {
+    private UserResponseDTO toResponse(User user) {
         return new UserResponseDTO(
                 user.getId(),
                 user.getName(),
