@@ -30,7 +30,7 @@ public class Order {
     private BigDecimal total;
 
     @Column(length = 255)
-    private String note;
+    private String notes;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
