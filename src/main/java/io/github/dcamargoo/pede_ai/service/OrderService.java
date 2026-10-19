@@ -11,6 +11,7 @@ import io.github.dcamargoo.pede_ai.exception.ResourceNotFoundException;
 import io.github.dcamargoo.pede_ai.repository.MenuItemRepository;
 import io.github.dcamargoo.pede_ai.repository.OrderRepository;
 import io.github.dcamargoo.pede_ai.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+@Slf4j
 @Service
 public class OrderService {
 
@@ -37,26 +39,21 @@ public class OrderService {
     @Transactional
     public OrderResponseDTO createOrder(OrderRequestDTO request) {
 
-        // 1. O cliente precisa existir (404)
         User customer = userRepository.findById(request.customerId())
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
 
-        // 2. O mesmo item não pode aparecer duas vezes na lista (422)
         validateNoDuplicateItems(request.items());
 
-        // 3. Cria o pedido (status e createdAt são preenchidos pelo @PrePersist)
         Order order = new Order();
         order.setCustomer(customer);
         order.setNotes(request.notes());
 
-        // 4. Monta cada item
         for (OrderItemRequestDTO itemRequest : request.items()) {
 
             MenuItem menuItem = menuItemRepository.findById(itemRequest.menuItemId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Item do cardápio não encontrado: " + itemRequest.menuItemId()));
 
-            // RN05: item indisponível não pode ser pedido (422)
             if (!menuItem.getAvailable()) {
                 throw new BusinessRuleException("O item '" + menuItem.getName() + "' está indisponível");
             }
@@ -64,22 +61,16 @@ public class OrderService {
             OrderItem orderItem = new OrderItem();
             orderItem.setMenuItem(menuItem);
             orderItem.setQuantity(itemRequest.quantity());
-
-            // RN07: o preço é COPIADO do cardápio no momento do pedido
             orderItem.setUnitPrice(menuItem.getPrice());
-
-            // RN06: subtotal = preço × quantidade
             orderItem.setSubtotal(menuItem.getPrice().multiply(BigDecimal.valueOf(itemRequest.quantity())));
 
-            // Liga o item ao pedido nos dois lados
             order.addItem(orderItem);
         }
 
-        // 5. RN06: total = soma dos subtotais
         order.setTotal(calculateTotal(order));
 
-        // 6. Salva o pedido; o cascade salva os itens junto
         Order savedOrder = orderRepository.save(order);
+        log.info("Pedido {} criado pelo cliente {} com total R$ {}", savedOrder.getId(), customer.getId(), savedOrder.getTotal());
         return toResponse(savedOrder);
     }
 
@@ -90,9 +81,15 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<OrderSummaryResponseDTO> listOrders(OrderStatus status) {
-        List<Order> orders = (status != null)
-                ? orderRepository.findByStatusOrderByCreatedAtDesc(status)
-                : orderRepository.findAllByOrderByCreatedAtDesc();
+
+        List<Order> orders;
+
+        if (status != null){
+            orders = orderRepository.findByStatusOrderByCreatedAtDesc(status);
+        }
+        else{
+            orders = orderRepository.findAllByOrderByCreatedAtDesc();
+        }
 
         return orders.stream()
                 .map(this::toSummary)
@@ -103,14 +100,14 @@ public class OrderService {
     public OrderResponseDTO cancelOrder(Long id) {
         Order order = getOrderIfExists(id);
 
-        // RN09: só pode cancelar enquanto estiver RECEIVED (422)
         if (order.getStatus() != OrderStatus.RECEIVED) {
             throw new BusinessRuleException(
                     "Só é possível cancelar pedidos com status RECEIVED. Status atual: " + order.getStatus());
         }
 
         order.setStatus(OrderStatus.CANCELLED);
-        Order savedOrder = orderRepository.save(order);
+        Order savedOrder = orderRepository.saveAndFlush(order);
+        log.info("Pedido {} cancelado", savedOrder.getId());
         return toResponse(savedOrder);
     }
 
@@ -118,10 +115,11 @@ public class OrderService {
     public OrderResponseDTO advanceOrderStatus(Long id) {
         Order order = getOrderIfExists(id);
 
-        // RN08: o status só avança para a próxima etapa
-        order.setStatus(nextStatus(order.getStatus()));
+        OrderStatus previousStatus = order.getStatus();
+        order.setStatus(nextStatus(previousStatus));
 
-        Order savedOrder = orderRepository.save(order);
+        Order savedOrder = orderRepository.saveAndFlush(order);
+        log.info("Pedido {} avançou de {} para {}", savedOrder.getId(), previousStatus, savedOrder.getStatus());
         return toResponse(savedOrder);
     }
 

@@ -15,3 +15,7 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+  logging:
+    level:
+      io.github.dcamargoo.pede_ai: INFO

@@ -34,7 +34,7 @@ public class MenuItemService {
     @Transactional
     public MenuItemResponseDTO createItem(MenuItemRequestDTO request){
         MenuItem newMenuItem = new MenuItem();
-        Category category = getCategoryIfExists(request.categoryId());
+        Category category = this.getCategoryIfExists(request.categoryId());
 
         newMenuItem.setName(request.name());
         newMenuItem.setDescription(request.description());
@@ -48,7 +48,7 @@ public class MenuItemService {
     @Transactional
     public MenuItemResponseDTO updateItem(Long id, MenuItemRequestDTO request){
         MenuItem menuItem = this.getMenuItemIfExists(id);
-        Category category = getCategoryIfExists(request.categoryId());
+        Category category = this.getCategoryIfExists(request.categoryId());
 
         menuItem.setName(request.name());
         menuItem.setDescription(request.description());
