@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
-    Boolean existsByMenuItemId(Long id);
+    boolean existsByMenuItemId(Long menuItemId);
 }

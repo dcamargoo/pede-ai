@@ -5,7 +5,6 @@ import io.github.dcamargoo.pede_ai.dto.MenuItemRequestDTO;
 import io.github.dcamargoo.pede_ai.dto.MenuItemResponseDTO;
 import io.github.dcamargoo.pede_ai.service.MenuItemService;
 import jakarta.validation.Valid;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/menuitems")
+@RequestMapping("/api/v1/menu-items")
 public class MenuItemController {
 
     private final MenuItemService menuItemService;
@@ -34,7 +33,7 @@ public class MenuItemController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}")
+    @PatchMapping("/{id}/availability")
     public ResponseEntity<MenuItemResponseDTO> updateAvailability(@PathVariable Long id, @Valid @RequestBody MenuItemAvailabilityRequestDTO request){
         MenuItemResponseDTO response = menuItemService.updateAvailability(id, request);
         return ResponseEntity.ok(response);

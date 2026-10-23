@@ -16,7 +16,6 @@ public record OrderRequestDTO(
         String notes,
 
         @NotEmpty(message = "O pedido precisa ter pelo menos 1 item")
-        @Valid
-        List<OrderItemRequestDTO> items
+        List<@Valid OrderItemRequestDTO> items
 ) {
 }
