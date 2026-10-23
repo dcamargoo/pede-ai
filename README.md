@@ -224,5 +224,3 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 ## Autor
 
 **Daniel Rubio Camargo**, formado em Ciência da Computação pela Universidade Presbiteriana Mackenzie
-
-[GitHub](https://github.com/dcamargoo)
