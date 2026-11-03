@@ -7,6 +7,7 @@ import io.github.dcamargoo.pede_ai.enums.Role;
 import io.github.dcamargoo.pede_ai.exception.ConflictException;
 import io.github.dcamargoo.pede_ai.exception.ResourceNotFoundException;
 import io.github.dcamargoo.pede_ai.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -14,9 +15,11 @@ import org.springframework.stereotype.Service;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository){
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -29,7 +32,7 @@ public class UserService {
         User newUser = new User();
         newUser.setName(request.name());
         newUser.setEmail(request.email());
-        newUser.setPassword(request.password());
+        newUser.setPassword(passwordEncoder.encode(request.password()));
         newUser.setRole(Role.CUSTOMER);
 
         User savedUser = userRepository.save(newUser);

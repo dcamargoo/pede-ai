@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
@@ -29,6 +30,9 @@ class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @InjectMocks
     private UserService userService;
@@ -51,6 +55,7 @@ class UserServiceTest {
             UserRequestDTO request = new UserRequestDTO("Marina", "marina@email.com", "senha123");
             when(userRepository.existsByEmail("marina@email.com")).thenReturn(false);
             when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(passwordEncoder.encode("senha123")).thenReturn("hashed-password");
 
             UserResponseDTO response = userService.registerUser(request);
 
@@ -61,6 +66,7 @@ class UserServiceTest {
             ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
             verify(userRepository).save(userCaptor.capture());
             assertThat(userCaptor.getValue().getRole()).isEqualTo(Role.CUSTOMER);
+            assertThat(userCaptor.getValue().getPassword()).isEqualTo("hashed-password");
         }
 
         @Test
@@ -73,6 +79,7 @@ class UserServiceTest {
 
             assertThat(exception.getMessage()).isEqualTo("Email já cadastrado");
             verify(userRepository, never()).save(any());
+            verify(passwordEncoder, never()).encode(any());
         }
     }
 
