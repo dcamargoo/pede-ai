@@ -10,12 +10,14 @@ import io.github.dcamargoo.pede_ai.repository.CategoryRepository;
 import io.github.dcamargoo.pede_ai.repository.MenuItemRepository;
 import io.github.dcamargoo.pede_ai.repository.OrderRepository;
 import io.github.dcamargoo.pede_ai.repository.UserRepository;
+import io.github.dcamargoo.pede_ai.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
@@ -48,6 +50,12 @@ public abstract class AbstractIntegrationTest {
     protected OrderRepository orderRepository;
 
     @Autowired
+    protected PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
@@ -59,12 +67,24 @@ public abstract class AbstractIntegrationTest {
     }
 
     protected User createCustomer(String email) {
+        return createUser("Marina", email, Role.CUSTOMER);
+    }
+
+    protected User createRestaurant(String email) {
+        return createUser("Restaurante", email, Role.RESTAURANT);
+    }
+
+    private User createUser(String name, String email, Role role) {
         User user = new User();
-        user.setName("Marina");
+        user.setName(name);
         user.setEmail(email);
-        user.setPassword("senha123");
-        user.setRole(Role.CUSTOMER);
+        user.setPassword(passwordEncoder.encode("senha123"));
+        user.setRole(role);
         return userRepository.save(user);
+    }
+
+    protected String bearerToken(User user) {
+        return "Bearer " + jwtService.generateToken(user);
     }
 
     protected Category createCategory(String name) {

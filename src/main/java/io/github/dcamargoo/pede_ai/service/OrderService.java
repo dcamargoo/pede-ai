@@ -6,11 +6,11 @@ import io.github.dcamargoo.pede_ai.entity.Order;
 import io.github.dcamargoo.pede_ai.entity.OrderItem;
 import io.github.dcamargoo.pede_ai.entity.User;
 import io.github.dcamargoo.pede_ai.enums.OrderStatus;
+import io.github.dcamargoo.pede_ai.enums.Role;
 import io.github.dcamargoo.pede_ai.exception.BusinessRuleException;
 import io.github.dcamargoo.pede_ai.exception.ResourceNotFoundException;
 import io.github.dcamargoo.pede_ai.repository.MenuItemRepository;
 import io.github.dcamargoo.pede_ai.repository.OrderRepository;
-import io.github.dcamargoo.pede_ai.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,22 +25,16 @@ import java.util.Set;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final UserRepository userRepository;
     private final MenuItemRepository menuItemRepository;
 
     public OrderService(OrderRepository orderRepository,
-                        UserRepository userRepository,
                         MenuItemRepository menuItemRepository) {
         this.orderRepository = orderRepository;
-        this.userRepository = userRepository;
         this.menuItemRepository = menuItemRepository;
     }
 
     @Transactional
-    public OrderResponseDTO createOrder(OrderRequestDTO request) {
-
-        User customer = userRepository.findById(request.customerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente não encontrado"));
+    public OrderResponseDTO createOrder(OrderRequestDTO request, User customer) {
 
         validateNoDuplicateItems(request.items());
 
@@ -75,8 +69,8 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public OrderResponseDTO findOrderById(Long id) {
-        return toResponse(getOrderIfExists(id));
+    public OrderResponseDTO findOrderById(Long id, User user) {
+        return toResponse(getOrderVisibleTo(id, user));
     }
 
     @Transactional(readOnly = true)
@@ -96,9 +90,16 @@ public class OrderService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<OrderSummaryResponseDTO> listCustomerOrders(User customer) {
+        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).stream()
+                .map(this::toSummary)
+                .toList();
+    }
+
     @Transactional
-    public OrderResponseDTO cancelOrder(Long id) {
-        Order order = getOrderIfExists(id);
+    public OrderResponseDTO cancelOrder(Long id, User customer) {
+        Order order = getOrderVisibleTo(id, customer);
 
         if (order.getStatus() != OrderStatus.RECEIVED) {
             throw new BusinessRuleException(
@@ -126,6 +127,18 @@ public class OrderService {
     private Order getOrderIfExists(Long id) {
         return orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado"));
+    }
+
+    private Order getOrderVisibleTo(Long id, User user) {
+        Order order = getOrderIfExists(id);
+
+        boolean isCustomer = user.getRole() == Role.CUSTOMER;
+        boolean isOwner = order.getCustomer().getId().equals(user.getId());
+        if (isCustomer && !isOwner) {
+            throw new ResourceNotFoundException("Pedido não encontrado");
+        }
+
+        return order;
     }
 
     private void validateNoDuplicateItems(List<OrderItemRequestDTO> items) {

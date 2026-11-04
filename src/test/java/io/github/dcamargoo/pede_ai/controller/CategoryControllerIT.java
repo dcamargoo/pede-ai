@@ -4,6 +4,7 @@ import io.github.dcamargoo.pede_ai.AbstractIntegrationTest;
 import io.github.dcamargoo.pede_ai.entity.Category;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@WithMockUser(roles = "RESTAURANT")
 class CategoryControllerIT extends AbstractIntegrationTest {
 
     @Test

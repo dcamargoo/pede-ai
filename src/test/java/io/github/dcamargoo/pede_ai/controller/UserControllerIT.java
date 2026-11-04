@@ -1,10 +1,12 @@
 package io.github.dcamargoo.pede_ai.controller;
 
 import io.github.dcamargoo.pede_ai.AbstractIntegrationTest;
+import io.github.dcamargoo.pede_ai.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -50,5 +52,17 @@ class UserControllerIT extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Email já cadastrado"));
 
         assertThat(userRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldReturnLoggedUser_whenCallingMe() throws Exception {
+        User customer = createCustomer("marina@email.com");
+
+        mockMvc.perform(get("/api/v1/users/me")
+                        .header("Authorization", bearerToken(customer)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(customer.getId()))
+                .andExpect(jsonPath("$.email").value("marina@email.com"))
+                .andExpect(jsonPath("$.password").doesNotExist());
     }
 }

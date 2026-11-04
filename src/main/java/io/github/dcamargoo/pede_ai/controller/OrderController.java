@@ -3,11 +3,13 @@ package io.github.dcamargoo.pede_ai.controller;
 import io.github.dcamargoo.pede_ai.dto.OrderRequestDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderResponseDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderSummaryResponseDTO;
+import io.github.dcamargoo.pede_ai.entity.User;
 import io.github.dcamargoo.pede_ai.enums.OrderStatus;
 import io.github.dcamargoo.pede_ai.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,14 +25,16 @@ public class OrderController {
     }
 
     @PostMapping
-    public ResponseEntity<OrderResponseDTO> create(@Valid @RequestBody OrderRequestDTO request) {
-        OrderResponseDTO response = orderService.createOrder(request);
+    public ResponseEntity<OrderResponseDTO> create(@Valid @RequestBody OrderRequestDTO request,
+                                                   @AuthenticationPrincipal User customer) {
+        OrderResponseDTO response = orderService.createOrder(request, customer);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponseDTO> findById(@PathVariable Long id) {
-        OrderResponseDTO response = orderService.findOrderById(id);
+    public ResponseEntity<OrderResponseDTO> findById(@PathVariable Long id,
+                                                     @AuthenticationPrincipal User user) {
+        OrderResponseDTO response = orderService.findOrderById(id, user);
         return ResponseEntity.ok(response);
     }
 
@@ -41,9 +45,16 @@ public class OrderController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<List<OrderSummaryResponseDTO>> listMyOrders(@AuthenticationPrincipal User customer) {
+        List<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer);
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{id}/cancel")
-    public ResponseEntity<OrderResponseDTO> cancel(@PathVariable Long id) {
-        OrderResponseDTO response = orderService.cancelOrder(id);
+    public ResponseEntity<OrderResponseDTO> cancel(@PathVariable Long id,
+                                                   @AuthenticationPrincipal User customer) {
+        OrderResponseDTO response = orderService.cancelOrder(id, customer);
         return ResponseEntity.ok(response);
     }
 

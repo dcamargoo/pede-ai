@@ -23,6 +23,19 @@ import java.util.List;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponseDTO> handleUnauthorized(UnauthorizedException ex,
+                                                               HttpServletRequest request) {
+        log.warn("Acesso não autorizado em {}: {}", request.getRequestURI(), ex.getMessage());
+
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Não autorizado",
+                ex.getMessage(),
+                request,
+                null);
+    }
+
     // 404: recurso não existe
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleNotFound(ResourceNotFoundException ex,

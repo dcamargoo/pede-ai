@@ -6,6 +6,7 @@ import io.github.dcamargoo.pede_ai.entity.MenuItem;
 import io.github.dcamargoo.pede_ai.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -17,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class MenuItemControllerIT extends AbstractIntegrationTest {
 
     @Test
+    @WithMockUser(roles = "RESTAURANT")
     void shouldCreateMenuItem_whenCategoryExists() throws Exception {
         Category category = createCategory("Lanches");
         String requestBody = """
@@ -57,6 +59,7 @@ class MenuItemControllerIT extends AbstractIntegrationTest {
     }
 
     @Test
+    @WithMockUser(roles = "RESTAURANT")
     void shouldReturnConflict_whenDeletingItemThatWasAlreadyOrdered() throws Exception {
         User customer = createCustomer("marina@email.com");
         Category category = createCategory("Lanches");

@@ -9,11 +9,11 @@ import io.github.dcamargoo.pede_ai.entity.Order;
 import io.github.dcamargoo.pede_ai.entity.OrderItem;
 import io.github.dcamargoo.pede_ai.entity.User;
 import io.github.dcamargoo.pede_ai.enums.OrderStatus;
+import io.github.dcamargoo.pede_ai.enums.Role;
 import io.github.dcamargoo.pede_ai.exception.BusinessRuleException;
 import io.github.dcamargoo.pede_ai.exception.ResourceNotFoundException;
 import io.github.dcamargoo.pede_ai.repository.MenuItemRepository;
 import io.github.dcamargoo.pede_ai.repository.OrderRepository;
-import io.github.dcamargoo.pede_ai.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -44,9 +44,6 @@ class OrderServiceTest {
     private OrderRepository orderRepository;
 
     @Mock
-    private UserRepository userRepository;
-
-    @Mock
     private MenuItemRepository menuItemRepository;
 
     @InjectMocks
@@ -56,9 +53,15 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        customer = new User();
-        customer.setId(1L);
-        customer.setName("Marina");
+        customer = buildUser(1L, "Marina", Role.CUSTOMER);
+    }
+
+    private User buildUser(Long id, String name, Role role) {
+        User user = new User();
+        user.setId(id);
+        user.setName(name);
+        user.setRole(role);
+        return user;
     }
 
     private Order buildOrder(OrderStatus status) {
@@ -88,7 +91,7 @@ class OrderServiceTest {
             when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
             when(orderRepository.saveAndFlush(order)).thenReturn(order);
 
-            OrderResponseDTO response = orderService.cancelOrder(10L);
+            OrderResponseDTO response = orderService.cancelOrder(10L, customer);
 
             assertThat(response.status()).isEqualTo(OrderStatus.CANCELLED);
             verify(orderRepository).saveAndFlush(order);
@@ -101,7 +104,7 @@ class OrderServiceTest {
             when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
 
             BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-                    () -> orderService.cancelOrder(10L));
+                    () -> orderService.cancelOrder(10L, customer));
 
             assertThat(exception.getMessage()).contains("RECEIVED");
             verify(orderRepository, never()).saveAndFlush(any());
@@ -111,8 +114,20 @@ class OrderServiceTest {
         void shouldThrowResourceNotFoundException_whenOrderDoesNotExist() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(99L));
+            assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(99L, customer));
 
+            verify(orderRepository, never()).saveAndFlush(any());
+        }
+
+        @Test
+        void shouldThrowResourceNotFoundException_whenOrderBelongsToAnotherCustomer() {
+            User anotherCustomer = buildUser(2L, "João", Role.CUSTOMER);
+            Order order = buildOrder(OrderStatus.RECEIVED);
+            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+            assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(10L, anotherCustomer));
+
+            assertThat(order.getStatus()).isEqualTo(OrderStatus.RECEIVED);
             verify(orderRepository, never()).saveAndFlush(any());
         }
     }
@@ -191,6 +206,22 @@ class OrderServiceTest {
     }
 
     @Nested
+    class ListCustomerOrders {
+
+        @Test
+        void shouldListOnlyOrdersOfLoggedCustomer() {
+            Order order = buildOrder(OrderStatus.RECEIVED);
+            when(orderRepository.findByCustomerIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(order));
+
+            List<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer);
+
+            assertThat(response).hasSize(1);
+            assertThat(response.get(0).customerId()).isEqualTo(1L);
+            verify(orderRepository, never()).findAllByOrderByCreatedAtDesc();
+        }
+    }
+
+    @Nested
     class FindOrderById {
 
         @Test
@@ -198,7 +229,7 @@ class OrderServiceTest {
             Order order = buildOrder(OrderStatus.RECEIVED);
             when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
 
-            OrderResponseDTO response = orderService.findOrderById(10L);
+            OrderResponseDTO response = orderService.findOrderById(10L, customer);
 
             assertThat(response.id()).isEqualTo(10L);
             assertThat(response.customerId()).isEqualTo(1L);
@@ -209,7 +240,30 @@ class OrderServiceTest {
         void shouldThrowResourceNotFoundException_whenOrderDoesNotExist() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThrows(ResourceNotFoundException.class, () -> orderService.findOrderById(99L));
+            assertThrows(ResourceNotFoundException.class, () -> orderService.findOrderById(99L, customer));
+        }
+
+        @Test
+        void shouldThrowResourceNotFoundException_whenOrderBelongsToAnotherCustomer() {
+            User anotherCustomer = buildUser(2L, "João", Role.CUSTOMER);
+            Order order = buildOrder(OrderStatus.RECEIVED);
+            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+            ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
+                    () -> orderService.findOrderById(10L, anotherCustomer));
+
+            assertThat(exception.getMessage()).isEqualTo("Pedido não encontrado");
+        }
+
+        @Test
+        void shouldReturnOrderOfAnyCustomer_whenUserIsRestaurant() {
+            User restaurant = buildUser(5L, "Restaurante", Role.RESTAURANT);
+            Order order = buildOrder(OrderStatus.RECEIVED);
+            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+
+            OrderResponseDTO response = orderService.findOrderById(10L, restaurant);
+
+            assertThat(response.customerId()).isEqualTo(1L);
         }
     }
 
@@ -220,15 +274,14 @@ class OrderServiceTest {
         void shouldCreateOrderWithCalculatedTotal_whenRequestIsValid() {
             MenuItem burger = buildMenuItem(1L, "Hambúrguer", "32.00", true);
             MenuItem soda = buildMenuItem(3L, "Refrigerante", "7.00", true);
-            OrderRequestDTO request = new OrderRequestDTO(1L, "Sem cebola", List.of(
+            OrderRequestDTO request = new OrderRequestDTO("Sem cebola", List.of(
                     new OrderItemRequestDTO(1L, 2),
                     new OrderItemRequestDTO(3L, 1)));
-            when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
             when(menuItemRepository.findById(1L)).thenReturn(Optional.of(burger));
             when(menuItemRepository.findById(3L)).thenReturn(Optional.of(soda));
             when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-            OrderResponseDTO response = orderService.createOrder(request);
+            OrderResponseDTO response = orderService.createOrder(request, customer);
 
             assertThat(response.total()).isEqualByComparingTo("71.00");
             assertThat(response.notes()).isEqualTo("Sem cebola");
@@ -247,26 +300,12 @@ class OrderServiceTest {
         }
 
         @Test
-        void shouldThrowResourceNotFoundException_whenCustomerDoesNotExist() {
-            OrderRequestDTO request = new OrderRequestDTO(99L, null, List.of(new OrderItemRequestDTO(1L, 1)));
-            when(userRepository.findById(99L)).thenReturn(Optional.empty());
-
-            ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                    () -> orderService.createOrder(request));
-
-            assertThat(exception.getMessage()).isEqualTo("Cliente não encontrado");
-            verify(menuItemRepository, never()).findById(any());
-            verify(orderRepository, never()).save(any());
-        }
-
-        @Test
         void shouldThrowResourceNotFoundException_whenMenuItemDoesNotExist() {
-            OrderRequestDTO request = new OrderRequestDTO(1L, null, List.of(new OrderItemRequestDTO(99L, 1)));
-            when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
+            OrderRequestDTO request = new OrderRequestDTO(null, List.of(new OrderItemRequestDTO(99L, 1)));
             when(menuItemRepository.findById(99L)).thenReturn(Optional.empty());
 
             ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                    () -> orderService.createOrder(request));
+                    () -> orderService.createOrder(request, customer));
 
             assertThat(exception.getMessage()).contains("99");
             verify(orderRepository, never()).save(any());
@@ -275,12 +314,11 @@ class OrderServiceTest {
         @Test
         void shouldThrowBusinessRuleException_whenMenuItemIsUnavailable() {
             MenuItem burger = buildMenuItem(1L, "Hambúrguer", "32.00", false);
-            OrderRequestDTO request = new OrderRequestDTO(1L, null, List.of(new OrderItemRequestDTO(1L, 1)));
-            when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
+            OrderRequestDTO request = new OrderRequestDTO(null, List.of(new OrderItemRequestDTO(1L, 1)));
             when(menuItemRepository.findById(1L)).thenReturn(Optional.of(burger));
 
             BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-                    () -> orderService.createOrder(request));
+                    () -> orderService.createOrder(request, customer));
 
             assertThat(exception.getMessage()).contains("Hambúrguer");
             verify(orderRepository, never()).save(any());
@@ -288,13 +326,12 @@ class OrderServiceTest {
 
         @Test
         void shouldThrowBusinessRuleException_whenMenuItemIsRepeated() {
-            OrderRequestDTO request = new OrderRequestDTO(1L, null, List.of(
+            OrderRequestDTO request = new OrderRequestDTO(null, List.of(
                     new OrderItemRequestDTO(1L, 2),
                     new OrderItemRequestDTO(1L, 1)));
-            when(userRepository.findById(1L)).thenReturn(Optional.of(customer));
 
             BusinessRuleException exception = assertThrows(BusinessRuleException.class,
-                    () -> orderService.createOrder(request));
+                    () -> orderService.createOrder(request, customer));
 
             assertThat(exception.getMessage()).contains("mais de uma vez");
             verify(menuItemRepository, never()).findById(any());

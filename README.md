@@ -17,7 +17,8 @@ O **Pede Aí** resolve isso centralizando o cardápio e os pedidos em uma API:
 
 ## Funcionalidades
 
-- Cadastro de clientes
+- Cadastro de clientes e login com JWT
+- Permissões por papel: cliente (`CUSTOMER`) e restaurante (`RESTAURANT`)
 - Categorias do cardápio (criar, editar, remover e listar)
 - Itens do cardápio (criar, editar, remover, filtrar por categoria e disponibilidade, marcar como indisponível)
 - Pedidos (criar, listar com filtro por status, consultar detalhes, cancelar e avançar o status)
@@ -36,13 +37,15 @@ O **Pede Aí** resolve isso centralizando o cardápio e os pedidos em uma API:
 | Itens indisponíveis | Um item indisponível não pode entrar em um pedido novo. |
 | Remoção segura | Um item que já foi pedido não pode ser removido (apenas marcado como indisponível), e uma categoria que ainda tem itens não pode ser removida. |
 | Dados únicos | O email do usuário e o nome da categoria são únicos. |
+| Pedido do próprio cliente | O cliente do pedido vem do token, nunca do JSON. Cada cliente só vê e cancela os próprios pedidos. |
 
 ## Tecnologias
 
 | Categoria | Tecnologia |
 |---|---|
 | Linguagem | Java 21 |
-| Framework | Spring Boot 4 (Web MVC, Data JPA, Validation) |
+| Framework | Spring Boot 4 (Web MVC, Data JPA, Validation, Security) |
+| Segurança | Spring Security, JWT (jjwt) e BCrypt |
 | Banco de dados | PostgreSQL 16 |
 | Migrations | Flyway |
 | Build | Maven |
@@ -78,6 +81,9 @@ src/main/java/io/github/dcamargoo/pede_ai
 - **Flyway + `ddl-auto: validate`:** o Flyway cria e altera o banco por meio de scripts SQL versionados. O Hibernate apenas valida se as entidades batem com as tabelas.
 - **Relacionamentos `LAZY`:** os dados relacionados só são carregados quando são necessários.
 - **O `PATCH /orders/{id}/advance` não recebe o novo status:** a API move o pedido para a próxima etapa, então é impossível pular etapas.
+- **Senhas com BCrypt:** o banco guarda apenas o hash da senha, nunca a senha original.
+- **Autenticação stateless com JWT:** o servidor não guarda sessão. Cada requisição envia o token no header `Authorization: Bearer <token>`.
+- **Pedido de outro cliente devolve 404, e não 403:** assim a API não revela que o pedido existe.
 
 ## Como executar
 
@@ -109,7 +115,17 @@ CREATE DATABASE pedeai OWNER pedeai;
 
 O Flyway cria as tabelas automaticamente ao iniciar. A API fica disponível em `http://localhost:8080/api/v1`.
 
-A conexão com o banco pode ser alterada pelas variáveis de ambiente `DB_URL`, `DB_USERNAME` e `DB_PASSWORD`.
+A conexão com o banco pode ser alterada pelas variáveis de ambiente `DB_URL`, `DB_USERNAME` e `DB_PASSWORD`. A chave que assina os tokens vem da variável `JWT_SECRET`.
+
+### 4. Usuário do restaurante
+
+O Flyway cria um usuário do restaurante para testes locais:
+
+| Email | Senha |
+|---|---|
+| `restaurante@pedeai.com` | `restaurante123` |
+
+Os clientes são criados pelo `POST /api/v1/users`.
 
 ## Testes
 
@@ -121,8 +137,8 @@ Esse comando roda todos os testes e gera o relatório de cobertura em `target/si
 
 | Tipo | Quantidade | O que testa |
 |---|---|---|
-| Unitários | 50 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
-| Integração | 16 | O fluxo completo (HTTP → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
+| Unitários | 56 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
+| Integração | 33 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
 
 **Cobertura:** 100% das linhas e dos branches na camada de service.
 
@@ -132,33 +148,58 @@ Escolhi o Testcontainers em vez de um banco em memória (como o H2) para que os 
 
 Caminho base: `/api/v1`
 
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/users` | Cadastrar um cliente |
-| GET | `/users/{id}` | Consultar um usuário |
-| GET | `/categories` | Listar as categorias |
-| POST | `/categories` | Criar uma categoria |
-| PUT | `/categories/{id}` | Editar uma categoria |
-| DELETE | `/categories/{id}` | Remover uma categoria |
-| GET | `/menu-items?categoryId=&available=` | Listar os itens do cardápio (filtros opcionais) |
-| GET | `/menu-items/{id}` | Consultar um item do cardápio |
-| POST | `/menu-items` | Criar um item do cardápio |
-| PUT | `/menu-items/{id}` | Editar um item do cardápio |
-| PATCH | `/menu-items/{id}/availability` | Alterar a disponibilidade de um item |
-| DELETE | `/menu-items/{id}` | Remover um item do cardápio |
-| POST | `/orders` | Fazer um pedido |
-| GET | `/orders?status=` | Listar os pedidos (filtro por status opcional) |
-| GET | `/orders/{id}` | Consultar os detalhes de um pedido |
-| PATCH | `/orders/{id}/cancel` | Cancelar um pedido |
-| PATCH | `/orders/{id}/advance` | Avançar o pedido para o próximo status |
+As rotas protegidas precisam do header `Authorization: Bearer <token>`. O token é obtido no `POST /auth/login`.
 
-### Exemplo: fazendo um pedido
+| Método | Rota | Descrição | Acesso |
+|---|---|---|---|
+| POST | `/users` | Cadastrar um cliente | Público |
+| POST | `/auth/login` | Fazer login e receber o token | Público |
+| GET | `/users/me` | Consultar o usuário logado | Logado |
+| GET | `/users/{id}` | Consultar um usuário | Restaurante |
+| GET | `/categories` | Listar as categorias | Público |
+| POST | `/categories` | Criar uma categoria | Restaurante |
+| PUT | `/categories/{id}` | Editar uma categoria | Restaurante |
+| DELETE | `/categories/{id}` | Remover uma categoria | Restaurante |
+| GET | `/menu-items?categoryId=&available=` | Listar os itens do cardápio (filtros opcionais) | Público |
+| GET | `/menu-items/{id}` | Consultar um item do cardápio | Público |
+| POST | `/menu-items` | Criar um item do cardápio | Restaurante |
+| PUT | `/menu-items/{id}` | Editar um item do cardápio | Restaurante |
+| PATCH | `/menu-items/{id}/availability` | Alterar a disponibilidade de um item | Restaurante |
+| DELETE | `/menu-items/{id}` | Remover um item do cardápio | Restaurante |
+| POST | `/orders` | Fazer um pedido | Cliente |
+| GET | `/orders/me` | Listar os pedidos do cliente logado | Cliente |
+| GET | `/orders?status=` | Listar todos os pedidos (filtro por status opcional) | Restaurante |
+| GET | `/orders/{id}` | Consultar os detalhes de um pedido | Logado (o cliente só vê os próprios) |
+| PATCH | `/orders/{id}/cancel` | Cancelar um pedido | Cliente (só os próprios) |
+| PATCH | `/orders/{id}/advance` | Avançar o pedido para o próximo status | Restaurante |
 
-`POST /api/v1/orders`
+### Exemplo: fazendo login
+
+`POST /api/v1/auth/login`
 
 ```json
 {
-  "customerId": 1,
+  "email": "marina@email.com",
+  "password": "senha123"
+}
+```
+
+Resposta `200 OK`:
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9..."
+}
+```
+
+O token vale por 2 horas.
+
+### Exemplo: fazendo um pedido
+
+`POST /api/v1/orders`, com o header `Authorization: Bearer <token>` de um cliente:
+
+```json
+{
   "notes": "Sem cebola",
   "items": [
     { "menuItemId": 1, "quantity": 2 },
@@ -205,6 +246,8 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 | Status | Quando acontece |
 |---|---|
 | 400 | Dados inválidos na requisição ou JSON malformado |
+| 401 | Login inválido, ou token ausente, inválido ou expirado |
+| 403 | O usuário está logado, mas o papel dele não tem permissão para a rota |
 | 404 | Recurso não encontrado |
 | 409 | Conflito com dados existentes (ex.: email já cadastrado) |
 | 422 | Regra de negócio violada (ex.: cancelar um pedido que já está em preparo) |
@@ -216,7 +259,8 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 - [x] Funcionalidades principais (usuários, categorias, itens do cardápio e pedidos)
 - [x] Tratamento global de erros, logs e migrations com Flyway
 - [x] Testes unitários e de integração com relatório de cobertura
-- [ ] Autenticação e autorização com Spring Security e JWT
+- [x] Autenticação e autorização com Spring Security e JWT
+- [ ] Limite de tentativas de login (rate limiting)
 - [ ] Desempenho: correção de N+1, paginação, índices e cache
 - [ ] Documentação com Swagger / OpenAPI
 - [ ] Docker Compose, CI com GitHub Actions e deploy na AWS
