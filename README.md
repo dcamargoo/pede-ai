@@ -45,7 +45,7 @@ O **Pede Aí** resolve isso centralizando o cardápio e os pedidos em uma API:
 |---|---|
 | Linguagem | Java 21 |
 | Framework | Spring Boot 4 (Web MVC, Data JPA, Validation, Security) |
-| Segurança | Spring Security, JWT (jjwt) e BCrypt |
+| Segurança | Spring Security, JWT (jjwt), BCrypt e Bucket4j |
 | Banco de dados | PostgreSQL 16 |
 | Migrations | Flyway |
 | Build | Maven |
@@ -84,6 +84,7 @@ src/main/java/io/github/dcamargoo/pede_ai
 - **Senhas com BCrypt:** o banco guarda apenas o hash da senha, nunca a senha original.
 - **Autenticação stateless com JWT:** o servidor não guarda sessão. Cada requisição envia o token no header `Authorization: Bearer <token>`.
 - **Pedido de outro cliente devolve 404, e não 403:** assim a API não revela que o pedido existe.
+- **Limite de tentativas de login:** cada IP pode tentar o login 5 vezes por minuto. Depois disso, a API devolve 429, o que dificulta ataques de força bruta.
 
 ## Como executar
 
@@ -138,7 +139,7 @@ Esse comando roda todos os testes e gera o relatório de cobertura em `target/si
 | Tipo | Quantidade | O que testa |
 |---|---|---|
 | Unitários | 56 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
-| Integração | 33 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
+| Integração | 35 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
 
 **Cobertura:** 100% das linhas e dos branches na camada de service.
 
@@ -251,6 +252,7 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 | 404 | Recurso não encontrado |
 | 409 | Conflito com dados existentes (ex.: email já cadastrado) |
 | 422 | Regra de negócio violada (ex.: cancelar um pedido que já está em preparo) |
+| 429 | Mais de 5 tentativas de login por minuto vindas do mesmo IP |
 | 500 | Erro inesperado (os detalhes ficam apenas no log, nunca na resposta) |
 
 ## Roadmap
@@ -260,7 +262,7 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 - [x] Tratamento global de erros, logs e migrations com Flyway
 - [x] Testes unitários e de integração com relatório de cobertura
 - [x] Autenticação e autorização com Spring Security e JWT
-- [ ] Limite de tentativas de login (rate limiting)
+- [x] Limite de tentativas de login (rate limiting)
 - [ ] Desempenho: correção de N+1, paginação, índices e cache
 - [ ] Documentação com Swagger / OpenAPI
 - [ ] Docker Compose, CI com GitHub Actions e deploy na AWS

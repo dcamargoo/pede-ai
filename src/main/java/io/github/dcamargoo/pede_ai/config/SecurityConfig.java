@@ -3,6 +3,7 @@ package io.github.dcamargoo.pede_ai.config;
 import io.github.dcamargoo.pede_ai.repository.UserRepository;
 import io.github.dcamargoo.pede_ai.security.JwtAuthenticationFilter;
 import io.github.dcamargoo.pede_ai.security.JwtService;
+import io.github.dcamargoo.pede_ai.security.LoginRateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -28,6 +29,7 @@ public class SecurityConfig {
                                                    JwtService jwtService,
                                                    UserRepository userRepository) throws Exception {
         JwtAuthenticationFilter jwtFilter = new JwtAuthenticationFilter(jwtService, userRepository);
+        LoginRateLimitFilter rateLimitFilter = new LoginRateLimitFilter();
 
         http
                 .csrf(csrf -> csrf.disable())
@@ -52,6 +54,7 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
