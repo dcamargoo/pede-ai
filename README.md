@@ -268,7 +268,7 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 - [x] Testes unitários e de integração com relatório de cobertura
 - [x] Autenticação e autorização com Spring Security e JWT
 - [x] Limite de tentativas de login (rate limiting)
-- [ ] Desempenho: correção de N+1, paginação, índices e cache
+- [ ] Desempenho: correção de N+1, paginação e índices
 - [ ] Documentação com Swagger / OpenAPI
 - [ ] Docker Compose, CI com GitHub Actions e deploy na AWS
 

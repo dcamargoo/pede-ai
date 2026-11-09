@@ -88,7 +88,7 @@ class OrderServiceTest {
         @Test
         void shouldCancelOrder_whenStatusIsReceived() {
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
             when(orderRepository.saveAndFlush(order)).thenReturn(order);
 
             OrderResponseDTO response = orderService.cancelOrder(10L, customer);
@@ -101,7 +101,7 @@ class OrderServiceTest {
         @EnumSource(value = OrderStatus.class, names = {"IN_PREPARATION", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"})
         void shouldThrowBusinessRuleException_whenStatusIsNotReceived(OrderStatus status) {
             Order order = buildOrder(status);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             BusinessRuleException exception = assertThrows(BusinessRuleException.class,
                     () -> orderService.cancelOrder(10L, customer));
@@ -112,7 +112,7 @@ class OrderServiceTest {
 
         @Test
         void shouldThrowResourceNotFoundException_whenOrderDoesNotExist() {
-            when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+            when(orderRepository.findWithItemsById(99L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(99L, customer));
 
@@ -123,7 +123,7 @@ class OrderServiceTest {
         void shouldThrowResourceNotFoundException_whenOrderBelongsToAnotherCustomer() {
             User anotherCustomer = buildUser(2L, "João", Role.CUSTOMER);
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             assertThrows(ResourceNotFoundException.class, () -> orderService.cancelOrder(10L, anotherCustomer));
 
@@ -141,7 +141,7 @@ class OrderServiceTest {
                 "OUT_FOR_DELIVERY, DELIVERED"})
         void shouldAdvanceOrderStatus_whenOrderStatusIsNotFinished(OrderStatus currentStatus, OrderStatus expectedStatus) {
             Order order = buildOrder(currentStatus);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
             when(orderRepository.saveAndFlush(order)).thenReturn(order);
 
             OrderResponseDTO response = orderService.advanceOrderStatus(10L);
@@ -154,7 +154,7 @@ class OrderServiceTest {
         @EnumSource(value = OrderStatus.class, names = {"DELIVERED", "CANCELLED"})
         void shouldThrowBusinessRuleException_whenOrderIsAlreadyFinished(OrderStatus currentStatus) {
             Order order = buildOrder(currentStatus);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             BusinessRuleException exception = assertThrows(BusinessRuleException.class,
                     () -> orderService.advanceOrderStatus(10L));
@@ -165,7 +165,7 @@ class OrderServiceTest {
 
         @Test
         void shouldThrowResourceNotFoundException_whenOrderDoesNotExist() {
-            when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+            when(orderRepository.findWithItemsById(99L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> orderService.advanceOrderStatus(99L));
 
@@ -227,7 +227,7 @@ class OrderServiceTest {
         @Test
         void shouldReturnOrder_whenOrderExists() {
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             OrderResponseDTO response = orderService.findOrderById(10L, customer);
 
@@ -238,7 +238,7 @@ class OrderServiceTest {
 
         @Test
         void shouldThrowResourceNotFoundException_whenOrderDoesNotExist() {
-            when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+            when(orderRepository.findWithItemsById(99L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class, () -> orderService.findOrderById(99L, customer));
         }
@@ -247,7 +247,7 @@ class OrderServiceTest {
         void shouldThrowResourceNotFoundException_whenOrderBelongsToAnotherCustomer() {
             User anotherCustomer = buildUser(2L, "João", Role.CUSTOMER);
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
                     () -> orderService.findOrderById(10L, anotherCustomer));
@@ -259,7 +259,7 @@ class OrderServiceTest {
         void shouldReturnOrderOfAnyCustomer_whenUserIsRestaurant() {
             User restaurant = buildUser(5L, "Restaurante", Role.RESTAURANT);
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findById(10L)).thenReturn(Optional.of(order));
+            when(orderRepository.findWithItemsById(10L)).thenReturn(Optional.of(order));
 
             OrderResponseDTO response = orderService.findOrderById(10L, restaurant);
 

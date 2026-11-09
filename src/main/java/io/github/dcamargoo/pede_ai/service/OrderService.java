@@ -125,7 +125,7 @@ public class OrderService {
     }
 
     private Order getOrderIfExists(Long id) {
-        return orderRepository.findById(id)
+        return orderRepository.findWithItemsById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido não encontrado"));
     }
 
