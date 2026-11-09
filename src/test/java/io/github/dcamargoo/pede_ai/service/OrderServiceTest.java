@@ -4,6 +4,7 @@ import io.github.dcamargoo.pede_ai.dto.OrderItemRequestDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderRequestDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderResponseDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderSummaryResponseDTO;
+import io.github.dcamargoo.pede_ai.dto.PageResponseDTO;
 import io.github.dcamargoo.pede_ai.entity.MenuItem;
 import io.github.dcamargoo.pede_ai.entity.Order;
 import io.github.dcamargoo.pede_ai.entity.OrderItem;
@@ -25,6 +26,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -177,30 +181,35 @@ class OrderServiceTest {
     @Nested
     class ListOrders {
 
+        private final Pageable pageable = PageRequest.of(0, 20);
+
         @Test
         void shouldListOrdersByOrderStatus_whenOrderStatusIsPresent() {
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findByStatusOrderByCreatedAtDesc(OrderStatus.RECEIVED)).thenReturn(List.of(order));
+            when(orderRepository.findByStatus(OrderStatus.RECEIVED, pageable))
+                    .thenReturn(new PageImpl<>(List.of(order), pageable, 1));
 
-            List<OrderSummaryResponseDTO> response = orderService.listOrders(OrderStatus.RECEIVED);
+            PageResponseDTO<OrderSummaryResponseDTO> response = orderService.listOrders(OrderStatus.RECEIVED, pageable);
 
-            assertThat(response).hasSize(1);
-            assertThat(response.get(0).status()).isEqualTo(OrderStatus.RECEIVED);
-            verify(orderRepository, never()).findAllByOrderByCreatedAtDesc();
+            assertThat(response.content()).hasSize(1);
+            assertThat(response.content().get(0).status()).isEqualTo(OrderStatus.RECEIVED);
+            assertThat(response.totalElements()).isEqualTo(1);
+            verify(orderRepository, never()).findAll(any(Pageable.class));
         }
 
         @Test
         void shouldListAllOrders_whenOrderStatusIsNotPresent() {
             Order receivedOrder = buildOrder(OrderStatus.RECEIVED);
             Order deliveredOrder = buildOrder(OrderStatus.DELIVERED);
-            when(orderRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(receivedOrder, deliveredOrder));
+            when(orderRepository.findAll(pageable))
+                    .thenReturn(new PageImpl<>(List.of(receivedOrder, deliveredOrder), pageable, 2));
 
-            List<OrderSummaryResponseDTO> response = orderService.listOrders(null);
+            PageResponseDTO<OrderSummaryResponseDTO> response = orderService.listOrders(null, pageable);
 
-            assertThat(response).hasSize(2);
-            assertThat(response.get(0).status()).isEqualTo(OrderStatus.RECEIVED);
-            assertThat(response.get(1).status()).isEqualTo(OrderStatus.DELIVERED);
-            verify(orderRepository, never()).findByStatusOrderByCreatedAtDesc(any());
+            assertThat(response.content()).hasSize(2);
+            assertThat(response.content().get(0).status()).isEqualTo(OrderStatus.RECEIVED);
+            assertThat(response.content().get(1).status()).isEqualTo(OrderStatus.DELIVERED);
+            verify(orderRepository, never()).findByStatus(any(), any());
         }
 
     }
@@ -208,16 +217,19 @@ class OrderServiceTest {
     @Nested
     class ListCustomerOrders {
 
+        private final Pageable pageable = PageRequest.of(0, 20);
+
         @Test
         void shouldListOnlyOrdersOfLoggedCustomer() {
             Order order = buildOrder(OrderStatus.RECEIVED);
-            when(orderRepository.findByCustomerIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(order));
+            when(orderRepository.findByCustomerId(1L, pageable))
+                    .thenReturn(new PageImpl<>(List.of(order), pageable, 1));
 
-            List<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer);
+            PageResponseDTO<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer, pageable);
 
-            assertThat(response).hasSize(1);
-            assertThat(response.get(0).customerId()).isEqualTo(1L);
-            verify(orderRepository, never()).findAllByOrderByCreatedAtDesc();
+            assertThat(response.content()).hasSize(1);
+            assertThat(response.content().get(0).customerId()).isEqualTo(1L);
+            verify(orderRepository, never()).findAll(any(Pageable.class));
         }
     }
 

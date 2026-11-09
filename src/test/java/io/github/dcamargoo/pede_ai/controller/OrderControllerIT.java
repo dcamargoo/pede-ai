@@ -181,7 +181,28 @@ class OrderControllerIT extends AbstractIntegrationTest {
         mockMvc.perform(get("/api/v1/orders/me")
                         .header("Authorization", bearerToken(marina)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].customerId").value(marina.getId()));
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].customerId").value(marina.getId()))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void shouldLimitPageSizeToOneHundred_whenClientAsksForMore() throws Exception {
+        User restaurant = createRestaurant("dono@email.com");
+
+        mockMvc.perform(get("/api/v1/orders?size=500")
+                        .header("Authorization", bearerToken(restaurant)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.size").value(100));
+    }
+
+    @Test
+    void shouldReturnBadRequest_whenSortFieldIsInvalid() throws Exception {
+        User restaurant = createRestaurant("dono@email.com");
+
+        mockMvc.perform(get("/api/v1/orders?sort=campoInexistente")
+                        .header("Authorization", bearerToken(restaurant)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Campo de ordenação inválido: 'campoInexistente'"));
     }
 }

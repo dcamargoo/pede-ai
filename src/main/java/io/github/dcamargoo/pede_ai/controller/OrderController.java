@@ -3,10 +3,14 @@ package io.github.dcamargoo.pede_ai.controller;
 import io.github.dcamargoo.pede_ai.dto.OrderRequestDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderResponseDTO;
 import io.github.dcamargoo.pede_ai.dto.OrderSummaryResponseDTO;
+import io.github.dcamargoo.pede_ai.dto.PageResponseDTO;
 import io.github.dcamargoo.pede_ai.entity.User;
 import io.github.dcamargoo.pede_ai.enums.OrderStatus;
 import io.github.dcamargoo.pede_ai.service.OrderService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,15 +43,18 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OrderSummaryResponseDTO>> list(
-            @RequestParam(required = false) OrderStatus status) {
-        List<OrderSummaryResponseDTO> response = orderService.listOrders(status);
+    public ResponseEntity<PageResponseDTO<OrderSummaryResponseDTO>> list(
+            @RequestParam(required = false) OrderStatus status,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponseDTO<OrderSummaryResponseDTO> response = orderService.listOrders(status, pageable);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<OrderSummaryResponseDTO>> listMyOrders(@AuthenticationPrincipal User customer) {
-        List<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer);
+    public ResponseEntity<PageResponseDTO<OrderSummaryResponseDTO>> listMyOrders(
+            @AuthenticationPrincipal User customer,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        PageResponseDTO<OrderSummaryResponseDTO> response = orderService.listCustomerOrders(customer, pageable);
         return ResponseEntity.ok(response);
     }
 

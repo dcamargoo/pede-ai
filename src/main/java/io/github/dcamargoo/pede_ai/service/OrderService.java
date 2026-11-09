@@ -14,6 +14,9 @@ import io.github.dcamargoo.pede_ai.repository.OrderRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import io.github.dcamargoo.pede_ai.dto.PageResponseDTO;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
@@ -74,27 +77,22 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrderSummaryResponseDTO> listOrders(OrderStatus status) {
+    public PageResponseDTO<OrderSummaryResponseDTO> listOrders(OrderStatus status, Pageable pageable) {
+        Page<Order> orders;
 
-        List<Order> orders;
-
-        if (status != null){
-            orders = orderRepository.findByStatusOrderByCreatedAtDesc(status);
-        }
-        else{
-            orders = orderRepository.findAllByOrderByCreatedAtDesc();
+        if (status != null) {
+            orders = orderRepository.findByStatus(status, pageable);
+        } else {
+            orders = orderRepository.findAll(pageable);
         }
 
-        return orders.stream()
-                .map(this::toSummary)
-                .toList();
+        return PageResponseDTO.from(orders.map(this::toSummary));
     }
 
     @Transactional(readOnly = true)
-    public List<OrderSummaryResponseDTO> listCustomerOrders(User customer) {
-        return orderRepository.findByCustomerIdOrderByCreatedAtDesc(customer.getId()).stream()
-                .map(this::toSummary)
-                .toList();
+    public PageResponseDTO<OrderSummaryResponseDTO> listCustomerOrders(User customer, Pageable pageable) {
+        Page<Order> orders = orderRepository.findByCustomerId(customer.getId(), pageable);
+        return PageResponseDTO.from(orders.map(this::toSummary));
     }
 
     @Transactional

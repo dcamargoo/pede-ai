@@ -5,6 +5,7 @@ import io.github.dcamargoo.pede_ai.dto.ErrorResponseDTO.FieldErrorDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -107,6 +108,15 @@ public class GlobalExceptionHandler {
 
         return buildResponse(HttpStatus.BAD_REQUEST, "Dados inválidos",
                 "Valor inválido para o parâmetro '" + ex.getName() + "'", request, null);
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    public ResponseEntity<ErrorResponseDTO> handleInvalidSort(PropertyReferenceException ex,
+                                                              HttpServletRequest request) {
+        log.warn("Ordenação inválida em {}: {}", request.getRequestURI(), ex.getPropertyName());
+
+        return buildResponse(HttpStatus.BAD_REQUEST, "Dados inválidos",
+                "Campo de ordenação inválido: '" + ex.getPropertyName() + "'", request, null);
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
