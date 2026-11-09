@@ -2,7 +2,7 @@
 
 API REST para gerenciar pedidos de delivery de um único restaurante, desenvolvida com **Java 21** e **Spring Boot 4**.
 
-> 🚧 **Em desenvolvimento.** Os próximos passos são melhorias de desempenho, documentação com Swagger e deploy. Veja o [Roadmap](#roadmap).
+> 🚧 **Em desenvolvimento.** Os próximos passos são a documentação com Swagger e o deploy. Veja o [Roadmap](#roadmap).
 
 ## Sobre o projeto
 
@@ -88,6 +88,8 @@ src/main/java/io/github/dcamargoo/pede_ai
 - **Autenticação stateless com JWT:** o servidor não guarda sessão. Cada requisição envia o token no header `Authorization: Bearer <token>`.
 - **Pedido de outro cliente devolve 404, e não 403:** assim a API não revela que o pedido existe.
 - **Limite de tentativas de login:** cada IP pode tentar o login 5 vezes por minuto. Depois disso, a API devolve 429, o que dificulta ataques de força bruta.
+- **N+1 resolvido com `@EntityGraph`:** como os relacionamentos são `LAZY`, listar o cardápio fazia 1 consulta para os itens e mais 1 para cada categoria, e buscar um pedido fazia uma consulta para cada item. Com o `@EntityGraph`, o Hibernate traz tudo junto em 1 consulta só (verificado no log do SQL).
+- **Paginação nas listas de pedidos:** `GET /orders` e `GET /orders/me` devolvem páginas de 20 itens por padrão, do pedido mais novo para o mais antigo. O tamanho máximo é 100 (um valor maior é reduzido para 100) e um campo de ordenação inexistente devolve 400. A resposta usa um `PageResponseDTO` próprio, para o formato da API não depender do `Page` do Spring.
 
 ## Como executar
 
@@ -144,9 +146,9 @@ Esse comando roda todos os testes e gera o relatório de cobertura em `target/si
 | Tipo | Quantidade | O que testa |
 |---|---|---|
 | Unitários | 57 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
-| Integração | 35 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
+| Integração | 37 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
 
-**Cobertura:** 92% das linhas e 97% dos branches no projeto todo, e 100% das linhas e dos branches na camada de service.
+**Cobertura:** 93% das linhas e 97% dos branches no projeto todo, e 100% das linhas e dos branches na camada de service.
 
 Escolhi o Testcontainers em vez de um banco em memória (como o H2) para que os testes rodem no mesmo banco usado pela aplicação.
 
@@ -173,8 +175,8 @@ As rotas protegidas precisam do header `Authorization: Bearer <token>`. O token 
 | PATCH | `/menu-items/{id}/availability` | Alterar a disponibilidade de um item | Restaurante |
 | DELETE | `/menu-items/{id}` | Remover um item do cardápio | Restaurante |
 | POST | `/orders` | Fazer um pedido | Cliente |
-| GET | `/orders/me` | Listar os pedidos do cliente logado | Cliente |
-| GET | `/orders?status=` | Listar todos os pedidos (filtro por status opcional) | Restaurante |
+| GET | `/orders/me?page=&size=` | Listar os pedidos do cliente logado (paginado) | Cliente |
+| GET | `/orders?status=&page=&size=` | Listar todos os pedidos (filtro por status opcional, paginado) | Restaurante |
 | GET | `/orders/{id}` | Consultar os detalhes de um pedido | Logado (o cliente só vê os próprios) |
 | PATCH | `/orders/{id}/cancel` | Cancelar um pedido | Cliente (só os próprios) |
 | PATCH | `/orders/{id}/advance` | Avançar o pedido para o próximo status | Restaurante |
@@ -268,7 +270,7 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 - [x] Testes unitários e de integração com relatório de cobertura
 - [x] Autenticação e autorização com Spring Security e JWT
 - [x] Limite de tentativas de login (rate limiting)
-- [ ] Desempenho: correção de N+1, paginação e índices
+- [x] Desempenho: correção de N+1 e paginação
 - [ ] Documentação com Swagger / OpenAPI
 - [ ] Docker Compose, CI com GitHub Actions e deploy na AWS
 
