@@ -2,7 +2,7 @@
 
 API REST para gerenciar pedidos de delivery de um único restaurante, desenvolvida com **Java 21** e **Spring Boot 4**.
 
-> 🚧 **Em desenvolvimento.** Os próximos passos são autenticação (JWT), melhorias de desempenho e deploy. Veja o [Roadmap](#roadmap).
+> 🚧 **Em desenvolvimento.** Os próximos passos são melhorias de desempenho, documentação com Swagger e deploy. Veja o [Roadmap](#roadmap).
 
 ## Sobre o projeto
 
@@ -22,6 +22,7 @@ O **Pede Aí** resolve isso centralizando o cardápio e os pedidos em uma API:
 - Categorias do cardápio (criar, editar, remover e listar)
 - Itens do cardápio (criar, editar, remover, filtrar por categoria e disponibilidade, marcar como indisponível)
 - Pedidos (criar, listar com filtro por status, consultar detalhes, cancelar e avançar o status)
+- Limite de tentativas de login (5 por minuto por IP)
 - Respostas de erro padronizadas
 - Versionamento do banco de dados com Flyway
 - Testes unitários e de integração
@@ -65,13 +66,15 @@ Controller  →  Service  →  Repository  →  PostgreSQL
 
 ```
 src/main/java/io/github/dcamargoo/pede_ai
+├── config       configuração do Spring Security e do BCrypt
 ├── controller   endpoints REST
 ├── service      regras de negócio
 ├── repository   repositories do Spring Data JPA
 ├── entity       entidades JPA
 ├── dto          records de requisição e de resposta
 ├── enums        Role, OrderStatus
-└── exception    exceções personalizadas e tratamento global de erros
+├── exception    exceções personalizadas e tratamento global de erros
+└── security     filtro JWT, geração do token e limite de tentativas de login
 ```
 
 ### Algumas decisões
@@ -128,6 +131,8 @@ O Flyway cria um usuário do restaurante para testes locais:
 
 Os clientes são criados pelo `POST /api/v1/users`.
 
+> ⚠️ A chave padrão do JWT e a senha acima servem **apenas para desenvolvimento**. Em produção, defina a variável `JWT_SECRET` e troque a senha do restaurante.
+
 ## Testes
 
 ```bash
@@ -138,10 +143,10 @@ Esse comando roda todos os testes e gera o relatório de cobertura em `target/si
 
 | Tipo | Quantidade | O que testa |
 |---|---|---|
-| Unitários | 56 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
+| Unitários | 57 | As regras de negócio da camada de service, usando Mockito para isolar os repositories |
 | Integração | 35 | O fluxo completo (HTTP → segurança → controller → service → banco) com MockMvc e um PostgreSQL real rodando no Docker via Testcontainers |
 
-**Cobertura:** 100% das linhas e dos branches na camada de service.
+**Cobertura:** 92% das linhas e 97% dos branches no projeto todo, e 100% das linhas e dos branches na camada de service.
 
 Escolhi o Testcontainers em vez de um banco em memória (como o H2) para que os testes rodem no mesmo banco usado pela aplicação.
 
