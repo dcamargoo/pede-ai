@@ -2,7 +2,7 @@
 
 API REST para gerenciar pedidos de delivery de um único restaurante, desenvolvida com **Java 21** e **Spring Boot 4**.
 
-> 🚧 **Em desenvolvimento.** Os próximos passos são a documentação com Swagger e o deploy. Veja o [Roadmap](#roadmap).
+> 🚧 **Em desenvolvimento.** O próximo passo é o deploy. Veja o [Roadmap](#roadmap).
 
 ## Sobre o projeto
 
@@ -51,6 +51,7 @@ O **Pede Aí** resolve isso centralizando o cardápio e os pedidos em uma API:
 | Migrations | Flyway |
 | Build | Maven |
 | Testes | JUnit 5, Mockito, AssertJ, MockMvc, Testcontainers |
+| Documentação | springdoc-openapi (Swagger UI) |
 | Cobertura | JaCoCo |
 | Outros | Lombok, SLF4J / Logback |
 
@@ -151,6 +152,24 @@ Esse comando roda todos os testes e gera o relatório de cobertura em `target/si
 **Cobertura:** 93% das linhas e 97% dos branches no projeto todo, e 100% das linhas e dos branches na camada de service.
 
 Escolhi o Testcontainers em vez de um banco em memória (como o H2) para que os testes rodem no mesmo banco usado pela aplicação.
+
+## Documentação com Swagger
+
+Com a aplicação rodando, a documentação interativa da API fica em:
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Especificação OpenAPI (JSON): `http://localhost:8080/v3/api-docs`
+
+Nela dá para ver todos os endpoints, os campos de cada requisição, as respostas possíveis (incluindo os erros) e testar tudo pelo navegador, sem precisar do Postman.
+
+### Testando rotas protegidas
+
+1. Abra o `POST /auth/login`, clique em **Try it out** e faça login (por exemplo, com o usuário do restaurante).
+2. Copie o valor de `token` da resposta.
+3. Clique no botão **Authorize**, no topo da página, e cole **só o token**, sem escrever `Bearer`.
+4. Pronto: as próximas requisições já vão com o token.
+
+> ⚠️ Em produção, considere desligar o Swagger com `springdoc.swagger-ui.enabled=false` e `springdoc.api-docs.enabled=false`, para não expor a documentação da API publicamente.
 
 ## Endpoints da API
 
@@ -271,7 +290,7 @@ Todos os erros devolvem a mesma estrutura. A lista `fields` só aparece nos erro
 - [x] Autenticação e autorização com Spring Security e JWT
 - [x] Limite de tentativas de login (rate limiting)
 - [x] Desempenho: correção de N+1 e paginação
-- [ ] Documentação com Swagger / OpenAPI
+- [x] Documentação com Swagger / OpenAPI
 - [ ] Docker Compose, CI com GitHub Actions e deploy na AWS
 
 ## Autor

@@ -18,6 +18,7 @@
 		<jacoco.version>0.8.14</jacoco.version>
 		<jjwt.version>0.13.0</jjwt.version>
 		<bucket4j.version>8.22.0</bucket4j.version>
+		<springdoc.version>3.2.0</springdoc.version>
 		<mockito.agent>-javaagent:${settings.localRepository}/org/mockito/mockito-core/${mockito.version}/mockito-core-${mockito.version}.jar -Xshare:off</mockito.agent>
 	</properties>
 	<dependencies>
@@ -109,6 +110,11 @@
 			<groupId>com.bucket4j</groupId>
 			<artifactId>bucket4j_jdk17-core</artifactId>
 			<version>${bucket4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${springdoc.version}</version>
 		</dependency>
 	</dependencies>
 
